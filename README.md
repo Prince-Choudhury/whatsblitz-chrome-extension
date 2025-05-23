@@ -1,1 +1,2 @@
-# whatsblitz-chrome-extension
+# WhatsBlitz – Chrome Extension for
+Personalized WhatsApp Messaging
