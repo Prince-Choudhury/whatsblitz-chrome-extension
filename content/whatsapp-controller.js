@@ -1,37 +1,46 @@
-// Load dependencies
-async function loadScript(src) {
-  const scriptURL = chrome.runtime.getURL(src);
-  const script = document.createElement('script');
-  script.src = scriptURL;
-  script.type = 'text/javascript';
-  return new Promise((resolve, reject) => {
-    script.onload = resolve;
-    script.onerror = reject;
-    document.head.appendChild(script);
-  });
-}
-
-// Load all required scripts
-Promise.all([
-  loadScript('lib/xlsx.full.min.js'),
-  loadScript('content/ui-controller.js'),
-  loadScript('content/message-processor.js')
-]).then(() => {
-  console.log('WhatsBlitz: All scripts loaded');
-}).catch(error => {
-  console.error('WhatsBlitz: Error loading scripts:', error);
-});
-
 class WhatsAppController {
   constructor() {
     this.isProcessing = false;
     this.currentProgress = 0;
     this.messageQueue = [];
+    this.messageProcessor = null;
+    this.uiController = null;
   }
 
   async initialize() {
-    // Wait for WhatsApp Web to load completely
-    await this.waitForElement('[data-testid="search"]');
+    try {
+      // Initialize components
+      this.messageProcessor = new MessageProcessor();
+      this.uiController = new UIController();
+
+      // Wait for WhatsApp Web to load completely
+      await this.waitForElement('[data-testid="search"]');
+      console.log('WhatsBlitz: All dependencies initialized');
+      return true;
+    } catch (error) {
+      console.error('WhatsBlitz: Error initializing:', error);
+      return false;
+    }
+  }
+
+  async waitForElement(selector) {
+    return new Promise((resolve) => {
+      if (document.querySelector(selector)) {
+        return resolve(document.querySelector(selector));
+      }
+
+      const observer = new MutationObserver(() => {
+        if (document.querySelector(selector)) {
+          observer.disconnect();
+          resolve(document.querySelector(selector));
+        }
+      });
+
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true
+      });
+    });
   }
 
   async searchContact(phoneNumber) {

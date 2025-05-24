@@ -6,7 +6,8 @@
   "permissions": [
     "scripting",
     "tabs",
-    "storage"
+    "storage",
+    "activeTab"
   ],
   "host_permissions": [
     "https://web.whatsapp.com/*"
@@ -23,15 +24,19 @@
     {
       "matches": ["https://web.whatsapp.com/*"],
       "css": ["content/styles.css"],
-      "js": ["content/whatsapp-controller.js"],
-      "run_at": "document_end"
+      "js": [
+        "content/message-processor.js",
+        "content/ui-controller.js",
+        "content/whatsapp-controller.js"
+      ],
+      "run_at": "document_idle"
     }
   ],
   "web_accessible_resources": [{
     "resources": [
-      "lib/xlsx.full.min.js",
-      "content/ui-controller.js",
-      "content/message-processor.js"
+      "assets/*",
+      "content/*",
+      "lib/*"
     ],
     "matches": ["https://web.whatsapp.com/*"]
   }],
