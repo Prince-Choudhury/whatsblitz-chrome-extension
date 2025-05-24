@@ -1,0 +1,43 @@
+{
+  "manifest_version": 3,
+  "name": "WhatsBlitz",
+  "version": "1.0.0",
+  "description": "Personalized WhatsApp messaging automation with Excel upload support",
+  "permissions": [
+    "scripting",
+    "tabs",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://web.whatsapp.com/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "assets/icon16.png",
+      "48": "assets/icon48.png",
+      "128": "assets/icon128.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://web.whatsapp.com/*"],
+      "css": ["content/styles.css"],
+      "js": ["content/whatsapp-controller.js"],
+      "run_at": "document_end"
+    }
+  ],
+  "web_accessible_resources": [{
+    "resources": [
+      "lib/xlsx.full.min.js",
+      "content/ui-controller.js",
+      "content/message-processor.js"
+    ],
+    "matches": ["https://web.whatsapp.com/*"]
+  }],
+  "icons": {
+    "16": "assets/icon16.png",
+    "48": "assets/icon48.png",
+    "128": "assets/icon128.png"
+  }
+}

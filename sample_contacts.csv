@@ -1,0 +1,4 @@
+phone,name,message,order_id,product
++917066259546,Kunal Mishra,"Hi {{name}}, your order #{{order_id}} for {{product}} is ready!",WB-001,iPhone 13
++918650432996,Rudransh Gupta,"Hello {{name}}, we've processed your order #{{order_id}} for {{product}}.",WB-002,MacBook Pro
++919342810655,Rajneesh Present,"Dear {{name}}, order #{{order_id}} ({{product}}) has been shipped!",WB-003,AirPods Pro
