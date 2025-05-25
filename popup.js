@@ -1,5 +1,28 @@
 document.addEventListener('DOMContentLoaded', function() {
+  console.log('WhatsBlitz Debug: DOM Content Loaded');
+
+  // Initialize UI elements
+  const initializeUI = () => {
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const browseBtn = document.getElementById('browseBtn');
+    const startBtn = document.getElementById('startBtn');
+    const status = document.getElementById('status');
+    const fileInfo = document.getElementById('fileInfo');
+    
+    if (!dropZone || !fileInput || !browseBtn || !startBtn || !status || !fileInfo) {
+      console.error('WhatsBlitz Debug: Required UI elements not found');
+      return false;
+    }
+    return true;
+  };
+
+  if (!initializeUI()) {
+    console.error('WhatsBlitz: Failed to initialize UI');
+    return;
+  }
   // Ensure XLSX is loaded
+  console.log('WhatsBlitz Debug: Checking XLSX library');
   if (typeof XLSX === 'undefined') {
     console.error('WhatsBlitz: XLSX library not loaded');
     showStatus('Error loading required libraries. Please try reloading.', 'error');
@@ -14,48 +37,96 @@ document.addEventListener('DOMContentLoaded', function() {
   const fileName = fileInfo.querySelector('.file-name');
 
   // Handle drag and drop
-  // Drag and drop handlers
-  dropZone.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    dropZone.style.borderColor = '#25D366';
-    dropZone.style.backgroundColor = '#f0f8f0';
+  ['dragenter', 'dragover'].forEach(eventName => {
+    dropZone.addEventListener(eventName, highlight, false);
   });
 
-  dropZone.addEventListener('dragleave', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    dropZone.style.borderColor = '#ccc';
-    dropZone.style.backgroundColor = '';
+  ['dragleave', 'drop'].forEach(eventName => {
+    dropZone.addEventListener(eventName, unhighlight, false);
   });
+
+  function highlight(e) {
+    preventDefaults(e);
+    dropZone.classList.add('dragover');
+  }
+
+  function unhighlight(e) {
+    preventDefaults(e);
+    dropZone.classList.remove('dragover');
+  }
 
   dropZone.addEventListener('drop', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    dropZone.style.borderColor = '#ccc';
-    dropZone.style.backgroundColor = '';
-    
+    preventDefaults(e);
     const file = e.dataTransfer.files[0];
     console.log('WhatsBlitz: File dropped:', file?.name);
-    handleFile(file);
+    if (file) {
+      handleFile(file);
+    }
   });
 
-  // Click to upload handlers
-  dropZone.addEventListener('click', () => {
-    console.log('WhatsBlitz: Upload area clicked');
-    fileInput.click();
+  // Browse button handler
+  const browseBtn = document.getElementById('browseBtn');
+  // Handle browse button click
+  browseBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('WhatsBlitz Debug: Browse button clicked');
+    try {
+      fileInput.click();
+      console.log('WhatsBlitz Debug: File input clicked successfully');
+    } catch (error) {
+      console.error('WhatsBlitz Debug: Error clicking file input:', error);
+      showStatus('Error selecting file. Please try again.', 'error');
+    }
   });
 
+  // Handle drop zone click
+  dropZone.addEventListener('click', (e) => {
+    if (e.target !== browseBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      fileInput.click();
+    }
+  });
+
+  // File input change handler
   fileInput.addEventListener('change', (e) => {
+    console.log('WhatsBlitz Debug: File input change event triggered');
     const file = e.target.files[0];
-    console.log('WhatsBlitz: File selected:', file?.name);
-    handleFile(file);
+    console.log('WhatsBlitz Debug: File selected:', file?.name);
+    if (file) {
+      try {
+        handleFile(file);
+        console.log('WhatsBlitz Debug: handleFile called successfully');
+      } catch (error) {
+        console.error('WhatsBlitz Debug: Error in handleFile:', error);
+      }
+    } else {
+      console.log('WhatsBlitz Debug: No file selected');
+    }
   });
+
+  // Make sure the file input is properly initialized
+  fileInput.type = 'file';
+  fileInput.accept = '.xlsx,.csv,.xls';
+  fileInput.style.display = 'none';
+
+  // Prevent default drag behaviors
+  ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+    dropZone.addEventListener(eventName, preventDefaults, false);
+    document.body.addEventListener(eventName, preventDefaults, false);
+  });
+
+  function preventDefaults(e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
 
   function handleFile(file) {
     console.log('WhatsBlitz: Handling file:', file?.name);
     
     if (!file) {
+      console.error('WhatsBlitz: No file provided to handleFile');
       showStatus('No file selected', 'error');
       return;
     }
@@ -84,8 +155,16 @@ document.addEventListener('DOMContentLoaded', function() {
       reader.onload = function(e) {
         console.log('WhatsBlitz: File loaded, processing...');
         try {
-          const data = new Uint8Array(e.target.result);
-          const workbook = XLSX.read(data, { type: 'array' });
+          let workbook;
+          if (file.name.endsWith('.csv')) {
+            // Handle CSV files
+            const csvData = e.target.result;
+            workbook = XLSX.read(csvData, { type: 'binary' });
+          } else {
+            // Handle Excel files
+            const data = new Uint8Array(e.target.result);
+            workbook = XLSX.read(data, { type: 'array' });
+          }
           
           // Get first sheet
           const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -140,7 +219,11 @@ document.addEventListener('DOMContentLoaded', function() {
         showStatus('Error reading file', 'error');
       };
 
-      reader.readAsArrayBuffer(file);
+      if (file.name.endsWith('.csv')) {
+        reader.readAsBinaryString(file);
+      } else {
+        reader.readAsArrayBuffer(file);
+      }
     });
   }
 

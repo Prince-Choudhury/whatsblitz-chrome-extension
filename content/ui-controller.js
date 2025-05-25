@@ -4,6 +4,7 @@ class UIController {
     this.progressBar = null;
     this.isDragging = false;
     this.dragOffset = { x: 0, y: 0 };
+    this.messageProcessor = new MessageProcessor();
   }
 
   initialize() {
@@ -25,6 +26,10 @@ class UIController {
           <p>Drop Excel file here<br>or click to browse</p>
           <input type="file" id="whatsblitz-file-input" accept=".xlsx,.csv" style="display: none;">
         </div>
+        <div class="whatsblitz-contacts" style="display: none;">
+          <h4>Contacts to Process</h4>
+          <div class="whatsblitz-contacts-list"></div>
+        </div>
         <div class="whatsblitz-progress" style="display: none;">
           <div class="whatsblitz-progress-bar">
             <div class="whatsblitz-progress-fill"></div>
@@ -34,6 +39,7 @@ class UIController {
         <div class="whatsblitz-controls">
           <button id="whatsblitz-start" disabled>Start Sending</button>
           <button id="whatsblitz-stop" disabled>Stop</button>
+          <button id="whatsblitz-clear" style="display: none;">Clear</button>
         </div>
         <div class="whatsblitz-status"></div>
       </div>
@@ -79,6 +85,8 @@ class UIController {
 
       .whatsblitz-content {
         padding: 16px;
+        max-height: calc(100vh - 100px);
+        overflow-y: auto;
       }
 
       .whatsblitz-upload-area {
@@ -88,11 +96,47 @@ class UIController {
         border-radius: 8px;
         margin-bottom: 16px;
         cursor: pointer;
+        transition: all 0.3s ease;
       }
 
-      .whatsblitz-upload-area:hover {
+      .whatsblitz-upload-area:hover,
+      .whatsblitz-upload-area.drag-over {
         border-color: #25D366;
         background: #f0f8f0;
+      }
+
+      .whatsblitz-contacts {
+        margin: 16px 0;
+      }
+
+      .whatsblitz-contacts h4 {
+        margin: 0 0 8px;
+        color: #666;
+      }
+
+      .whatsblitz-contacts-list {
+        max-height: 200px;
+        overflow-y: auto;
+        border: 1px solid #eee;
+        border-radius: 4px;
+      }
+
+      .whatsblitz-contact-item {
+        padding: 8px;
+        border-bottom: 1px solid #eee;
+        font-size: 14px;
+      }
+
+      .whatsblitz-contact-item:last-child {
+        border-bottom: none;
+      }
+
+      .whatsblitz-contact-name {
+        font-weight: bold;
+      }
+
+      .whatsblitz-contact-phone {
+        color: #666;
       }
 
       .whatsblitz-progress {
@@ -131,6 +175,12 @@ class UIController {
         border-radius: 4px;
         cursor: pointer;
         font-weight: bold;
+        transition: all 0.3s ease;
+      }
+
+      .whatsblitz-controls button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
       }
 
       #whatsblitz-start {
@@ -138,15 +188,15 @@ class UIController {
         color: white;
       }
 
-      #whatsblitz-start:disabled {
-        background: #ccc;
-        cursor: not-allowed;
-      }
-
       #whatsblitz-stop {
         background: #ff4444;
         color: white;
         display: none;
+      }
+
+      #whatsblitz-clear {
+        background: #f0f0f0;
+        color: #666;
       }
 
       .whatsblitz-status {
@@ -200,6 +250,38 @@ class UIController {
       this.isDragging = false;
     });
 
+    // File upload handling
+    const dropZone = document.getElementById('whatsblitz-drop-zone');
+    const fileInput = document.getElementById('whatsblitz-file-input');
+
+    dropZone.addEventListener('click', () => fileInput.click());
+
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('drag-over');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.classList.remove('drag-over');
+    });
+
+    dropZone.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+      
+      const file = e.dataTransfer.files[0];
+      if (file) {
+        await this.handleFileUpload(file);
+      }
+    });
+
+    fileInput.addEventListener('change', async () => {
+      const file = fileInput.files[0];
+      if (file) {
+        await this.handleFileUpload(file);
+      }
+    });
+
     // Minimize functionality
     const minimizeBtn = this.sidebar.querySelector('.whatsblitz-minimize');
     const content = this.sidebar.querySelector('.whatsblitz-content');
@@ -207,6 +289,32 @@ class UIController {
     minimizeBtn.addEventListener('click', () => {
       content.style.display = content.style.display === 'none' ? 'block' : 'none';
       minimizeBtn.textContent = content.style.display === 'none' ? '□' : '_';
+    });
+
+    // Start/Stop buttons
+    const startBtn = document.getElementById('whatsblitz-start');
+    const stopBtn = document.getElementById('whatsblitz-stop');
+    const clearBtn = document.getElementById('whatsblitz-clear');
+
+    startBtn.addEventListener('click', () => {
+      chrome.runtime.sendMessage({ type: 'START_SENDING' });
+      startBtn.style.display = 'none';
+      stopBtn.style.display = 'block';
+      stopBtn.disabled = false;
+      clearBtn.style.display = 'none';
+    });
+
+    stopBtn.addEventListener('click', () => {
+      chrome.runtime.sendMessage({ type: 'STOP_SENDING' });
+      stopBtn.style.display = 'none';
+      startBtn.style.display = 'block';
+      clearBtn.style.display = 'block';
+      this.showNotification('Message sending stopped', 'error');
+    });
+
+    clearBtn.addEventListener('click', () => {
+      this.messageProcessor.clearContacts();
+      this.resetUI();
     });
 
     // Progress updates
@@ -218,24 +326,53 @@ class UIController {
     document.addEventListener('whatsblitz_notification', (e) => {
       this.showNotification(e.detail, 'success');
     });
+  }
 
-    // Start/Stop buttons
+  async handleFileUpload(file) {
+    try {
+      const result = await this.messageProcessor.processFile(file);
+      
+      if (result.success) {
+        this.showContacts(result.contacts);
+        this.showNotification(result.message, 'success');
+        document.getElementById('whatsblitz-start').disabled = false;
+        document.getElementById('whatsblitz-clear').style.display = 'block';
+      } else {
+        this.showNotification(result.message, 'error');
+      }
+    } catch (error) {
+      this.showNotification(error.message, 'error');
+    }
+  }
+
+  showContacts(contacts) {
+    const contactsList = this.sidebar.querySelector('.whatsblitz-contacts-list');
+    const contactsSection = this.sidebar.querySelector('.whatsblitz-contacts');
+    
+    contactsList.innerHTML = contacts.map(contact => `
+      <div class="whatsblitz-contact-item">
+        <div class="whatsblitz-contact-name">${contact.name}</div>
+        <div class="whatsblitz-contact-phone">${contact.phone}</div>
+      </div>
+    `).join('');
+
+    contactsSection.style.display = 'block';
+  }
+
+  resetUI() {
+    const contactsSection = this.sidebar.querySelector('.whatsblitz-contacts');
+    const progressSection = this.sidebar.querySelector('.whatsblitz-progress');
     const startBtn = document.getElementById('whatsblitz-start');
     const stopBtn = document.getElementById('whatsblitz-stop');
+    const clearBtn = document.getElementById('whatsblitz-clear');
 
-    startBtn.addEventListener('click', () => {
-      chrome.runtime.sendMessage({ type: 'START_SENDING' });
-      startBtn.style.display = 'none';
-      stopBtn.style.display = 'block';
-      stopBtn.disabled = false;
-    });
-
-    stopBtn.addEventListener('click', () => {
-      chrome.runtime.sendMessage({ type: 'STOP_SENDING' });
-      stopBtn.style.display = 'none';
-      startBtn.style.display = 'block';
-      this.showNotification('Message sending stopped', 'error');
-    });
+    contactsSection.style.display = 'none';
+    progressSection.style.display = 'none';
+    startBtn.disabled = true;
+    startBtn.style.display = 'block';
+    stopBtn.style.display = 'none';
+    clearBtn.style.display = 'none';
+    this.showNotification('', '');
   }
 
   updateProgress(progress) {
@@ -248,26 +385,27 @@ class UIController {
     progressText.textContent = `${progress}%`;
 
     if (progress === 100) {
-      setTimeout(() => {
-        progressBar.style.display = 'none';
-        document.getElementById('whatsblitz-stop').style.display = 'none';
-        document.getElementById('whatsblitz-start').style.display = 'block';
-      }, 2000);
+      document.getElementById('whatsblitz-stop').style.display = 'none';
+      document.getElementById('whatsblitz-start').style.display = 'block';
+      document.getElementById('whatsblitz-clear').style.display = 'block';
     }
   }
 
   showNotification(message, type) {
-    const status = this.sidebar.querySelector('.whatsblitz-status');
-    status.textContent = message;
-    status.className = `whatsblitz-status ${type}`;
-    status.style.display = 'block';
+    const statusDiv = this.sidebar.querySelector('.whatsblitz-status');
+    
+    if (!message) {
+      statusDiv.style.display = 'none';
+      return;
+    }
 
-    setTimeout(() => {
-      status.style.display = 'none';
-    }, 5000);
+    statusDiv.textContent = message;
+    statusDiv.className = 'whatsblitz-status';
+    if (type) statusDiv.classList.add(type);
+    statusDiv.style.display = 'block';
   }
 }
 
-// Initialize UI
+// Initialize UI controller
 const uiController = new UIController();
 uiController.initialize();

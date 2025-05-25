@@ -2,4 +2,4 @@ phone,name,message,product,order_id
 +917066259546,Kunal Mishra,"Hi {{name}}, your order #{{order_id}} for {{product}} is ready for pickup!",iPhone 13 Pro,ORD-123
 +918650432996,Rudransh Gupta,"Hello {{name}}! Just confirming your {{product}} order #{{order_id}} will be delivered tomorrow.",MacBook Air,ORD-456
 +918770877456,Tanishk K,"Dear {{name}}, thank you for ordering {{product}}! Your order #{{order_id}} has been shipped.",iPad Mini,ORD-789
-+917518897033,Rahit R P,"{{name}}, great news! Your {{product}} (Order #{{order_id}}) is out for delivery.",Apple Watch,ORD-101
++917518897033,Rahit R P,"{{name}}, great news! Your {{product}} (Order #{{order_id}}) is out for delivery.",Apple Watch,ORD-101 

@@ -25,6 +25,7 @@
       "matches": ["https://web.whatsapp.com/*"],
       "css": ["content/styles.css"],
       "js": [
+        "lib/xlsx.full.min.js",
         "content/message-processor.js",
         "content/ui-controller.js",
         "content/whatsapp-controller.js"

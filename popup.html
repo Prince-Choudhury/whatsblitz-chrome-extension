@@ -26,6 +26,10 @@
       border-color: #25D366;
       background: #f0f8f0;
     }
+    .upload-area.dragover {
+      border-color: #25D366;
+      background: #f0f8f0;
+    }
     button {
       background: #25D366;
       color: white;
@@ -34,6 +38,15 @@
       border-radius: 4px;
       cursor: pointer;
       font-weight: bold;
+    }
+    .browse-btn {
+      background: #128C7E;
+      margin: 10px 0;
+      padding: 8px 20px;
+      font-size: 14px;
+    }
+    .browse-btn:hover {
+      background: #075E54;
     }
     button:disabled {
       background: #ccc;
@@ -57,17 +70,35 @@
 <body>
   <div class="container">
     <h2>WhatsBlitz</h2>
-    <div class="upload-area" id="dropZone">
-      <p>Drop your Excel file here<br>or click to browse</p>
-      <input type="file" id="fileInput" accept=".xlsx,.csv" style="display: none;">
-      <div id="fileInfo" style="display: none; margin-top: 10px;">
-        <p class="file-name" style="margin: 0; font-size: 14px;"></p>
+    <form id="uploadForm" onsubmit="return false;">
+      <div class="upload-area" id="dropZone">
+        <p>Drop your Excel/CSV file here</p>
+        <input type="file" id="fileInput" accept=".xlsx,.csv,.xls" style="display: none;">
+        <button type="button" id="browseBtn" class="browse-btn">Browse Files</button>
+        <div id="fileInfo" style="display: none; margin-top: 10px;">
+          <p class="file-name" style="margin: 0; font-size: 14px;"></p>
+        </div>
       </div>
-    </div>
+    </form>
     <div id="status" class="status"></div>
     <button id="startBtn" disabled>Start Sending Messages</button>
   </div>
-  <script src="lib/xlsx.full.min.js" type="text/javascript"></script>
-  <script src="popup.js" type="text/javascript" defer></script>
+  <script src="lib/xlsx.full.min.js"></script>
+  <script>
+    // Ensure XLSX is loaded before loading popup.js
+    window.addEventListener('load', function() {
+      if (typeof XLSX !== 'undefined') {
+        console.log('XLSX loaded successfully');
+        var script = document.createElement('script');
+        script.src = 'popup.js';
+        document.body.appendChild(script);
+      } else {
+        console.error('XLSX failed to load');
+        document.getElementById('status').textContent = 'Error: Required library failed to load';
+        document.getElementById('status').style.display = 'block';
+        document.getElementById('status').className = 'status error';
+      }
+    });
+  </script>
 </body>
 </html>
