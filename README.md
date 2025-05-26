@@ -2,7 +2,7 @@
 
 WhatsBlitz is a powerful Chrome extension that enables personalized WhatsApp messaging automation with Excel file support. Perfect for businesses and individuals who need to send personalized messages to multiple contacts efficiently.
 
-## Features
+## Feature
 
 - 📊 Excel/CSV File Upload
   - Support for .xlsx and .csv files

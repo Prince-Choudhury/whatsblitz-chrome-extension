@@ -297,15 +297,22 @@ class UIController {
     const clearBtn = document.getElementById('whatsblitz-clear');
 
     startBtn.addEventListener('click', () => {
-      chrome.runtime.sendMessage({ type: 'START_SENDING' });
-      startBtn.style.display = 'none';
-      stopBtn.style.display = 'block';
-      stopBtn.disabled = false;
-      clearBtn.style.display = 'none';
+      const contacts = this.messageProcessor.getContacts();
+      if (contacts && contacts.length > 0) {
+        startBtn.style.display = 'none';
+        stopBtn.style.display = 'block';
+        stopBtn.disabled = false;
+        clearBtn.style.display = 'none';
+        
+        // Start sending messages
+        whatsAppController.startProcessing(contacts);
+      } else {
+        this.showNotification('No contacts loaded. Please upload a file first.', 'error');
+      }
     });
 
     stopBtn.addEventListener('click', () => {
-      chrome.runtime.sendMessage({ type: 'STOP_SENDING' });
+      whatsAppController.stopProcessing();
       stopBtn.style.display = 'none';
       startBtn.style.display = 'block';
       clearBtn.style.display = 'block';
